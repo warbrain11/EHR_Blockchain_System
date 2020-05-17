@@ -1,0 +1,14 @@
+<html>
+    <head>
+        <h1>Register User</h1>
+    </head>
+
+    <body>
+        <form method = "POST"> {% csrf_token %}
+            <table>
+                {{ form.as_table }}
+            </table>
+        </form>
+        <b> {{ response_message }} </b> 
+    </body>
+</html>
