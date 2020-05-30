@@ -2,19 +2,27 @@ from django.db import models
 from datetime import datetime
 from django.utils import timezone
 from django.contrib.auth.models import AbstractBaseUser
-from blockchain.manager import UserManager
+from blockchain.manager import *
 from rest_framework.authtoken.models import Token
 
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, pre_save, pre_delete
 from django.dispatch import receiver
 from blockchain_server import settings
+import hashlib
 # Create your models here.
 
 class blockchain(models.Model):
-    Hash                            = models.CharField(max_length = 64, primary_key = True, null = False)
-    PreviousHash                    = models.CharField(max_length = 64, null = False)
+    Hash                            = models.CharField(max_length = 65, null = True, blank = True)
+    PreviousHash                    = models.CharField(max_length = 65, null = True, blank = True)
     TimeStamp                       = models.DateTimeField(null = False)
     BlockData                       = models.TextField(null = False)
+
+    objects                         = Blockchain_Manager()
+
+    class Meta:
+        db_table                    = 'Blockchain'
+
+
 
 class User(AbstractBaseUser):
     username                        = models.CharField(verbose_name = 'username', max_length=30, blank = False, null = False, primary_key = True, unique = True)
@@ -45,8 +53,22 @@ class User(AbstractBaseUser):
     def has_module_perms(self, app_label):
         return True
 
-
+#Creates a token for a user each time a user is created
 @receiver(post_save, sender = settings.AUTH_USER_MODEL)
 def create_auth_token(sender, instance = None, created = False, **kwargs):
     if created:
         Token.objects.create(user = instance)
+
+"""
+@receiver(pre_delete, sender = blockchain)
+def prevent_delete(sender, instance, **kwargs):
+    raise Exception('Cannot delete a block. Sorry not sorry.')
+"""
+
+
+
+
+
+
+
+

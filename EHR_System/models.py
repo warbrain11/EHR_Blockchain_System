@@ -3,35 +3,39 @@ from datetime import datetime
 from django.utils import timezone
 from rest_framework.authtoken.models import Token
 from EHR_System.managers import *
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
+from blockchain.models import *
 from blockchain_server import settings
+import json
+
+#from django.http import JsonResponse
 
 class Patient(models.Model):
     first_name                      = models.CharField(max_length = 36, blank = False, null = False)
     last_name                       = models.CharField(max_length = 36, blank = False, null = False)
-    primary_phone                   = models.CharField(max_length = 10, blank = False, null = False)
-    cell_phone                      = models.CharField(max_length = 10, blank = False, null = False)
+    primary_phone                   = models.CharField(max_length = 13, blank = False, null = False)
+    cell_phone                      = models.CharField(max_length = 13, blank = False, null = False)
     email                           = models.EmailField(blank = False, null = False)
 
 class Emergency_Contacts(models.Model):
     patient                         = models.ForeignKey(Patient, on_delete = models.CASCADE)
     first_name                      = models.CharField(max_length = 36, blank = False, null = False)
     last_name                       = models.CharField(max_length = 36, blank = False, null = False)
-    primary_phone                   = models.CharField(max_length = 10, blank = False, null = False)
+    primary_phone                   = models.CharField(max_length = 13, blank = False, null = False)
     email                           = models.EmailField(blank = True, null = False)
     relationship_to_patient         = models.CharField(max_length = 26, blank = False, null = False)
     
 class Patient_Demographics(models.Model):
-    patient                         = models.OneToOneField(Patient, on_delete = models.CASCADE, primary_key = True)
+    patient                         = models.OneToOneField(Patient, on_delete = models.CASCADE, primary_key = True, related_name = 'patient_demographics')
     ethnicity                       = models.CharField(max_length = 36, blank = True, null = False)
     race                            = models.CharField(max_length = 36, blank = True, null = False)
     gender                          = models.CharField(max_length = 36, blank = True, null = False)
     sex                             = models.CharField(max_length = 36, blank = False, null = False)
-    date_of_birth                   = models.DateField(blank = False, null = False, default = timezone.now)
+    date_of_birth                   = models.DateTimeField(blank = False, null = False, default = timezone.now)
     age                             = models.IntegerField(null = False, default = 0)
-    height                          = models.IntegerField(null = True)                  #Default in inches
-    weight                          = models.IntegerField(null = False, default = 0)    #Default in pounds
+    height                          = models.DecimalField(max_digits = 6, decimal_places = 3, null = True)                  #Default in inches
+    weight                          = models.DecimalField(max_digits = 6, decimal_places = 3, null = True)                  #Default in pounds
     body_mass_index                 = models.DecimalField(max_digits = 6, decimal_places = 3)
     primary_language                = models.CharField(max_length = 36, blank = True)
     hair_color                      = models.CharField(max_length = 36, blank = True)
@@ -39,6 +43,10 @@ class Patient_Demographics(models.Model):
     dominant_hand                   = models.CharField(max_length = 36, blank = True)
 
     objects                         = Patient_Demographics_Manager()
+    
+    class Meta:
+        db_table = 'Patient_Demographics'
+
 
 class Medication(models.Model):
     patient                         = models.ForeignKey(Patient, on_delete = models.CASCADE)
@@ -78,6 +86,7 @@ class Surgical_History(models.Model):
 class History_Of_Transfusions(models.Model):
     date_time                       = models.DateTimeField(null = False, blank = False)
     patient                         = models.ForeignKey(Patient, on_delete = models.CASCADE)
+    reason                          = models.CharField(max_length = 150, null = False, blank = True)
     units                           = models.DecimalField(max_digits = 6, decimal_places = 3)
     type_of_transfusion             = models.CharField(max_length = 75, blank = False, null = False)
     veinous_access_device           = models.CharField(max_length = 75, blank = True, null = False)
@@ -154,19 +163,355 @@ class Phys_Exam(models.Model):
     patient                         = models.ForeignKey(Patient, on_delete = models.CASCADE)
     date_time                       = models.DateTimeField(null = False, blank = False)
     examining_doctor                = models.CharField(max_length = 75, blank = False, null = False)
-    weight_lbs                      = models.DecimalField(max_digits = 7, decimal_places = 3)
-    physique                        = models.CharField(max_length = 200, blank = True)
-    vitals                          = models.OneToOneField(Phys_Exam_Vitals, on_delete = models.PROTECT)
-    lymph_nodes_desc                = models.TextField(blank = True)
-    chest_desc                      = models.TextField(blank = True)
-    heart                           = models.OneToOneField(Phys_Exam_Heart, on_delete = models.PROTECT)
-    abdomen_desc                    = models.TextField(blank = True)
-    extremities_desc                = models.TextField(blank = True)
-    neurological_desc               = models.TextField(blank = True)
-    pelvic_desc                     = models.TextField(blank = True)
-    genitalia_desc                  = models.TextField(blank = True)
-    rectal_desc                     = models.TextField(blank = True)
-    formulation                     = models.TextField(blank = True)
-    impression                      = models.TextField(blank = True)
-    plan                            = models.TextField(blank = True)
+    height_in                       = models.DecimalField(max_digits = 6, decimal_places = 3, null = True)                  #Default in inches
+    weight_lbs                      = models.DecimalField(max_digits = 6, decimal_places = 3, null = True)                  #Default in pounds                        = models.CharField(max_length = 200, blank = True)
+    vitals                          = models.OneToOneField(Phys_Exam_Vitals, on_delete = models.PROTECT, null = True, related_name = 'phys_exam')
+    lymph_nodes_desc                = models.TextField(blank = True, default = '')
+    chest_desc                      = models.TextField(blank = True, default = '')
+    heart                           = models.OneToOneField(Phys_Exam_Heart, on_delete = models.PROTECT, null = True, related_name = 'phys_exam')
+    abdomen_desc                    = models.TextField(blank = True, default = '')
+    extremities_desc                = models.TextField(blank = True, default = '')
+    neurological_desc               = models.TextField(blank = True, default = '')
+    pelvic_desc                     = models.TextField(blank = True, default = '')
+    genitalia_desc                  = models.TextField(blank = True, default = '')
+    rectal_desc                     = models.TextField(blank = True, default = '')
+    formulation                     = models.TextField(blank = True, default = '')
+    impression                      = models.TextField(blank = True, default = '')
+    plan                            = models.TextField(blank = True, default = '')
+
+
+    class Meta:
+        db_table = 'Phys_Exam'
+
+"""
+@receiver(post_save, sender = Phys_Exam)
+def update_demographics(sender, instance, **kwargs):
+    height = instance.height_in
+    weight = instance.weight_lbs
+    patient = instance.patient
+    pd = Patient_Demographics.objects.get(patient = patient)
+    update_these = []
+
+    if(weight):
+        update_these.append['weight']
+
+    if(height):
+        update_these.append['height']
+
+    if(update_these != []):
+        pd.save(update_fields = update_these)
+"""
+
+
+@receiver(post_save, sender = Patient)
+def save_patient_post(sender, instance, **kwargs):  
+    block_data = {}
+    block_data['db_op'] = 'Save'  
+    block_data['first_name'] = instance.first_name
+    block_data['last_name'] = instance.last_name
+    block_data['primary_phone'] = instance.primary_phone
+    block_data['email'] = instance.email
+
+    block_data = json.dumps(block_data)
+
+    #Creates Genesis Block in the blockchain if one hasn't been created already
+    blockchain.objects.add_block(block_data)
+
+
+@receiver(post_save, sender = Patient)
+def save_emergency_contact_post(sender, instance, **kwargs):  
+    block_data = {}
+    block_data['db_op'] = 'Save'  
+    block_data['patient'] = instance.patient
+    block_data['first_name'] = instance.first_name
+    block_data['last_name'] = instance.last_name
+    block_data['primary_phone'] = instance.primary_phone
+    block_data['email'] = instance.email
+    block_data['relationship_to_patient'] = instance.relationship_to_patient
+
+    block_data = json.dumps(block_data)
+
+    #Creates Genesis Block in the blockchain if one hasn't been created already
+    blockchain.objects.add_block(block_data)
+
+@receiver(post_save, sender = Patient)
+def save_patient_demographics_post(sender, instance, **kwargs):  
+    block_data = {}
+    block_data['db_op'] = 'Save'  
+    block_data['patient'] = instance.patient
+    block_data['ethnicity'] = instance.ethnicity
+    block_data['race'] = instance.race
+    block_data['primary_phone'] = instance.primary_phone
+    block_data['gender'] = instance.gender
+    block_data['sex'] = instance.sex
+    block_data['date_of_birth'] = instance.date_of_birth
+    block_data['age'] = instance.age
+    block_data['height'] = instance.height
+    block_data['weight'] = instance.weight
+    block_data['body_mass_index'] = instance.body_mass_index
+    block_data['primary_language'] = instance.primary_language
+    block_data['hair_color'] = instance.hair_color
+    block_data['eye_color'] = instance.eye_color
+    block_data['dominant_hand'] = instance.dominant_hand
+
+    block_data = json.dumps(block_data)
+
+    #Creates Genesis Block in the blockchain if one hasn't been created already
+    blockchain.objects.add_block(block_data)
+
+@receiver(post_save, sender = Patient)
+def save_emergency_contacts_post(sender, instance, **kwargs):  
+    block_data = {}
+    block_data['db_op'] = 'Save'  
+    block_data['patient'] = instance.patient
+    block_data['first_name'] = instance.first_name
+    block_data['last_name'] = instance.last_name
+    block_data['primary_phone'] = instance.primary_phone
+    block_data['email'] = instance.email
+    block_data['relationship_to_patient'] = instance.relationship_to_patient
+
+    block_data = json.dumps(block_data)
+
+    #Creates Genesis Block in the blockchain if one hasn't been created already
+    blockchain.objects.add_block(block_data)
+
+@receiver(post_save, sender = Patient)
+def save_medication_post(sender, instance, **kwargs):  
+    block_data = {}
+    block_data['db_op'] = 'Save'  
+    block_data['patient'] = instance.patient
+    block_data['medication'] = instance.medication
+    block_data['frequency_description'] = instance.frequency_description
+
+    block_data = json.dumps(block_data)
+
+    #Creates Genesis Block in the blockchain if one hasn't been created already
+    blockchain.objects.add_block(block_data)
+
+@receiver(post_save, sender = Patient)
+def save_allergies_post(sender, instance, **kwargs):  
+    block_data = {}
+    block_data['db_op'] = 'Save'  
+    block_data['patient'] = instance.patient
+    block_data['allergic_to'] = instance.allergic_to
+    block_data['allergy_notes'] = instance.allergy_notes
+
+    block_data = json.dumps(block_data)
+
+    #Creates Genesis Block in the blockchain if one hasn't been created already
+    blockchain.objects.add_block(block_data)
+
+@receiver(post_save, sender = Patient)
+def save_immunization_post(sender, instance, **kwargs):  
+    block_data = {}
+    block_data['db_op'] = 'Save'  
+    block_data['patient'] = instance.patient
+    block_data['vaccine'] = instance.vaccine
+    block_data['date_time'] = instance.date_time
+    block_data['complications'] = instance.complications
+
+    block_data = json.dumps(block_data)
+
+    #Creates Genesis Block in the blockchain if one hasn't been created already
+    blockchain.objects.add_block(block_data)
+
+@receiver(post_save, sender = Patient)
+def save_medical_visit_post(sender, instance, **kwargs):  
+    block_data = {}
+    block_data['db_op'] = 'Save'  
+    block_data['patient'] = instance.patient
+    block_data['reason'] = instance.reason
+    block_data['main_complaint'] = instance.main_complaint
+    block_data['description'] = instance.description
+    block_data['type_of_visit'] = instance.type_of_visit
+    block_data['examining_doctor'] = instance.examining_doctor
+    block_data['date_time'] = instance.date_time
+
+    block_data = json.dumps(block_data)
+
+    #Creates Genesis Block in the blockchain if one hasn't been created already
+    blockchain.objects.add_block(block_data)
+
+@receiver(post_save, sender = Patient)
+def save_surgical_history_post(sender, instance, **kwargs):  
+    block_data = {}
+    block_data['db_op'] = 'Save'  
+    block_data['patient'] = instance.patient
+    block_data['date_time'] = instance.date_time
+    block_data['duration'] = instance.duration
+    block_data['operating_doctors'] = instance.operating_doctors
+    block_data['notes'] = instance.notes
+    block_data['outcome'] = instance.outcome
+    block_data['complications'] = instance.complications
+
+    block_data = json.dumps(block_data)
+
+    #Creates Genesis Block in the blockchain if one hasn't been created already
+    blockchain.objects.add_block(block_data)
+
+@receiver(post_save, sender = Patient)
+def save_transfusion_history_post(sender, instance, **kwargs):  
+    block_data = {}
+    block_data['db_op'] = 'Save'  
+    block_data['patient'] = instance.patient
+    block_data['reason'] = instance.reason
+    block_data['units'] = instance.units
+    block_data['type_of_transfusion'] = instance.type_of_transfusion
+    block_data['veinous_access_device'] = instance.veinous_access_device
+    block_data['infusion_device'] = instance.infusion_device
+    block_data['infusion_device_settings'] = instance.infusion_device_settings
+    block_data['blood_type'] = instance.blood_type
+    block_data['complications'] = instance.complications
+    block_data['notes'] = instance.notes
+
+    block_data = json.dumps(block_data)
+
+    #Creates Genesis Block in the blockchain if one hasn't been created already
+    blockchain.objects.add_block(block_data)
+
+@receiver(post_save, sender = Patient)
+def save_history_of_present_illness_post(sender, instance, **kwargs):  
+    block_data = {}
+    block_data['db_op'] = 'Save'  
+    block_data['patient'] = instance.patient
+    block_data['onset'] = instance.onset
+    block_data['illness'] = instance.illness
+    block_data['body_location'] = instance.body_location
+    block_data['description'] = instance.description
+    block_data['aggravating_factors'] = instance.aggravating_factors
+    block_data['alleviating_factors'] = instance.alleviating_factors
+
+    block_data = json.dumps(block_data)
+
+    #Creates Genesis Block in the blockchain if one hasn't been created already
+    blockchain.objects.add_block(block_data)
+
+@receiver(post_save, sender = Patient)
+def save_family_history_illness_post(sender, instance, **kwargs):  
+    block_data = {}
+    block_data['db_op'] = 'Save'  
+    block_data['patient'] = instance.patient
+    block_data['family_first_name'] = instance.family_first_name
+    block_data['family_last_name'] = instance.family_last_name
+    block_data['relationship_to_patient'] = instance.relationship_to_patient
+    block_data['health_status'] = instance.health_status
+    block_data['date_of_birth'] = instance.date_of_birth
+    block_data['date_of_death'] = instance.date_of_death
+    block_data['cause_of_death'] = instance.cause_of_death
+    block_data['description_of_illnesses'] = instance.description_of_illnesses
+
+    block_data = json.dumps(block_data)
+
+    #Creates Genesis Block in the blockchain if one hasn't been created already
+    blockchain.objects.add_block(block_data)
+
+@receiver(post_save, sender = Patient)
+def save_illness_history_post(sender, instance, **kwargs):  
+    block_data = {}
+    block_data['db_op'] = 'Save'  
+    block_data['patient'] = instance.patient
+    block_data['onset_date'] = instance.onset_date
+    block_data['date_cured'] = instance.date_cured
+    block_data['illness'] = instance.illness
+    block_data['body_location'] = instance.body_location
+    block_data['description'] = instance.description
+    block_data['aggravating_factors'] = instance.aggravating_factors
+    block_data['alleviating_factors'] = instance.alleviating_factors
+
+    block_data = json.dumps(block_data)
+
+    #Creates Genesis Block in the blockchain if one hasn't been created already
+    blockchain.objects.add_block(block_data)
+
+@receiver(post_save, sender = Patient)
+def save_disabilities_post(sender, instance, **kwargs):  
+    block_data = {}
+    block_data['db_op'] = 'Save'  
+    block_data['patient'] = instance.patient
+    block_data['onset_date'] = instance.onset_date
+    block_data['disability'] = instance.disability
+    block_data['description'] = instance.description
+    block_data['aggravating_factors'] = instance.aggravating_factors
+    block_data['alleviating_factors'] = instance.alleviating_factors
+
+    block_data = json.dumps(block_data)
+
+    #Creates Genesis Block in the blockchain if one hasn't been created already
+    blockchain.objects.add_block(block_data)
+
+@receiver(post_save, sender = Patient)
+def save_exam_vitals_post(sender, instance, **kwargs):  
+    block_data = {}
+    block_data['db_op'] = 'Save'  
+    block_data['patient'] = instance.patient
+    block_data['pressure_right_palpatation'] = instance.pressure_right_palpatation
+    block_data['pressure_left_palpatation'] = instance.pressure_left_palpatation
+    block_data['pressure_right_auscultation'] = instance.pressure_right_auscultation
+    block_data['pressure_left_auscultation'] = instance.pressure_left_auscultation
+    block_data['heart_rate'] = instance.heart_rate
+    block_data['respiration_rate'] = instance.respiration_rate
+    block_data['temperature_celcius'] = instance.temperature_celcius
+
+    block_data = json.dumps(block_data)
+
+    #Creates Genesis Block in the blockchain if one hasn't been created already
+    blockchain.objects.add_block(block_data)
+
+@receiver(post_save, sender = Patient)
+def save_exam_heart_post(sender, instance, **kwargs):  
+    block_data = {}
+    block_data['db_op'] = 'Save'  
+    block_data['patient'] = instance.patient
+    block_data['description'] = instance.pressure_right_palpatation
+    block_data['r_carotid_pulses_desc'] = instance.r_carotid_pulses_desc
+    block_data['l_carotid_pulses_desc'] = instance.l_carotid_pulses_desc
+    block_data['r_brachial_pulses_desc'] = instance.r_brachial_pulses_desc
+    block_data['l_brachial_pulses_desc'] = instance.l_brachial_pulses_desc
+    block_data['r_radial_pulses_desc'] = instance.r_radial_pulses_desc
+    block_data['l_radial_pulses_desc'] = instance.l_radial_pulses_desc
+    block_data['r_femoral_pulses_desc'] = instance.r_femoral_pulses_desc
+    block_data['l_femoral_pulses_desc'] = instance.l_femoral_pulses_desc
+    block_data['r_dorsalis_pedis_pulses_desc'] = instance.r_dorsalis_pedis_pulses_desc
+    block_data['l_dorsalis_pedis_pulses_desc'] = instance.l_dorsalis_pedis_pulses_desc
+    block_data['r_posterior_tibial_pulses_desc'] = instance.r_posterior_tibial_pulses_desc
+    block_data['l_posterior_tibial_pulses_desc'] = instance.l_posterior_tibial_pulses_desc
+
+    block_data = json.dumps(block_data)
+
+    #Creates Genesis Block in the blockchain if one hasn't been created already
+    blockchain.objects.add_block(block_data)
+
+@receiver(post_save, sender = Patient)
+def save_exam_heart_post(sender, instance, **kwargs):  
+    block_data = {}
+    block_data['db_op'] = 'Save'  
+    block_data['patient'] = instance.patient
+    block_data['date_time'] = instance.date_time
+    block_data['examining_doctor'] = instance.examining_doctor
+    block_data['height_in'] = instance.height_in
+    block_data['weight_lbs'] = instance.weight_lbs
+    block_data['vitals'] = instance.vitals
+    block_data['lymph_nodes_desc'] = instance.lymph_nodes_desc
+    block_data['chest_desc'] = instance.chest_desc
+    block_data['heart'] = instance.heart
+    block_data['abdomen_desc'] = instance.abdomen_desc
+    block_data['extremities_desc'] = instance.extremities_desc
+    block_data['neurological_desc'] = instance.neurological_desc
+    block_data['pelvic_desc'] = instance.pelvic_desc
+    block_data['genitalia_desc'] = instance.genitalia_desc
+    block_data['rectal_desc'] = instance.rectal_desc
+    block_data['formulation'] = instance.formulation
+    block_data['impression'] = instance.impression
+    block_data['plan'] = instance.plan
+
+    block_data = json.dumps(block_data)
+
+    #Creates Genesis Block in the blockchain if one hasn't been created already
+    blockchain.objects.add_block(block_data)
+
+
+
+
+
+
 

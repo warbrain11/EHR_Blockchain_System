@@ -45,4 +45,12 @@ def Register_User_API(request):
 
     return JsonResponse("Failed to create a new user", safe = False)
 
-# Create your views here.
+@api_view(['GET'])
+def display_blockchain(request):
+    chain = blockchain.objects.all()
+    ser = blockchain_serializer(chain, many = True)
+
+    return JsonResponse(ser.data, safe = False)
+
+
+
