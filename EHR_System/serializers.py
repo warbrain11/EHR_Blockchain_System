@@ -51,6 +51,21 @@ class Medical_Visits_Serializer(serializers.ModelSerializer):
         model = Medical_Visits
         fields = '__all__'
 
+    def save(self):
+        mv = Medical_Visits(
+            patient = self.validated_data['patient'],
+            reason = self.validated_data['reason'],
+            main_complaint = self.validated_data['main_complaint'],
+            description = self.validated_data['description'],
+            type_of_visit = self.validated_data['type_of_visit'],
+            examining_doctor = self.validated_data['examining_doctor'],
+            date_time = self.validated_data['date_time']
+        )
+
+        mv.save()
+        
+        return mv
+
 class Surgical_History_Serializer(serializers.ModelSerializer):
     class Meta:
         model = Surgical_History

@@ -22,8 +22,6 @@ class blockchain(models.Model):
     class Meta:
         db_table                    = 'Blockchain'
 
-
-
 class User(AbstractBaseUser):
     username                        = models.CharField(verbose_name = 'username', max_length=30, blank = False, null = False, primary_key = True, unique = True)
     email                           = models.EmailField(verbose_name = 'email', blank = False, null = False, unique = True)
@@ -59,12 +57,28 @@ def create_auth_token(sender, instance = None, created = False, **kwargs):
     if created:
         Token.objects.create(user = instance)
 
+@receiver(pre_save, sender = blockchain)
+def update_hash(sender, instance, **kwargs):
+    h = hashlib.sha256()
+    
+    prev_hash = instance.PreviousHash
+    time_stamp = datetime.strftime(instance.TimeStamp,  "%Y-%m-%dT%H:%M:%S")
+    block_data = instance.BlockData
+        
+    h.update(bytes(prev_hash, encoding = 'utf-8'))
+    h.update(bytes(time_stamp, encoding = 'utf-8'))
+    h.update(bytes(block_data, encoding = 'utf-8'))
+
+    my_hash = h.hexdigest()
+
+    instance.Hash = my_hash
+
+
 """
 @receiver(pre_delete, sender = blockchain)
 def prevent_delete(sender, instance, **kwargs):
     raise Exception('Cannot delete a block. Sorry not sorry.')
 """
-
 
 
 

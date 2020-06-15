@@ -318,7 +318,7 @@ def get_medical_visits(request):
                 data['description'] = request.data['description']
 
             if('type_of_visit' in request.data):
-                data['type_of_visit'] = datetime.strptime(request.data['type_of_visit'], "%Y-%m-%dT%H:%M:%S")
+                data['type_of_visit'] = request.data['type_of_visit']
 
             if('examining_doctor' in request.data):
                 data['examining_doctor'] = request.data['examining_doctor']

@@ -7,6 +7,7 @@ from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 from blockchain.models import *
 from blockchain_server import settings
+from blockchain.models import update_hash
 import json
 
 #from django.http import JsonResponse
@@ -205,8 +206,11 @@ def update_demographics(sender, instance, **kwargs):
 
 @receiver(post_save, sender = Patient)
 def save_patient_post(sender, instance, **kwargs):  
+    signals.pre_save.disconnect(update_hash, sender = blockchain)  
+
     block_data = {}
-    block_data['db_op'] = 'Save'  
+    block_data['db_op'] = 'Save'
+    block_data['table'] = instance._meta.db_table  
     block_data['first_name'] = instance.first_name
     block_data['last_name'] = instance.last_name
     block_data['primary_phone'] = instance.primary_phone
@@ -216,12 +220,15 @@ def save_patient_post(sender, instance, **kwargs):
 
     #Creates Genesis Block in the blockchain if one hasn't been created already
     blockchain.objects.add_block(block_data)
+    signals.pre_save.connect(update_hash, sender = blockchain)
 
-
-@receiver(post_save, sender = Patient)
+@receiver(post_save, sender = Emergency_Contacts)
 def save_emergency_contact_post(sender, instance, **kwargs):  
+    signals.pre_save.disconnect(update_hash, sender = blockchain)  
+
     block_data = {}
-    block_data['db_op'] = 'Save'  
+    block_data['db_op'] = 'Save'
+    block_data['table'] = instance._meta.db_table    
     block_data['patient'] = instance.patient
     block_data['first_name'] = instance.first_name
     block_data['last_name'] = instance.last_name
@@ -233,22 +240,25 @@ def save_emergency_contact_post(sender, instance, **kwargs):
 
     #Creates Genesis Block in the blockchain if one hasn't been created already
     blockchain.objects.add_block(block_data)
+    signals.pre_save.connect(update_hash, sender = blockchain)
 
-@receiver(post_save, sender = Patient)
-def save_patient_demographics_post(sender, instance, **kwargs):  
+@receiver(post_save, sender = Patient_Demographics)
+def save_patient_demographics_post(sender, instance, **kwargs): 
+    signals.pre_save.disconnect(update_hash, sender = blockchain)  
+ 
     block_data = {}
-    block_data['db_op'] = 'Save'  
-    block_data['patient'] = instance.patient
+    block_data['db_op'] = 'Save'
+    block_data['table'] = instance._meta.db_table    
+    block_data['patient'] = instance.patient.id
     block_data['ethnicity'] = instance.ethnicity
     block_data['race'] = instance.race
-    block_data['primary_phone'] = instance.primary_phone
     block_data['gender'] = instance.gender
     block_data['sex'] = instance.sex
     block_data['date_of_birth'] = instance.date_of_birth
     block_data['age'] = instance.age
-    block_data['height'] = instance.height
-    block_data['weight'] = instance.weight
-    block_data['body_mass_index'] = instance.body_mass_index
+    block_data['height'] = float(instance.height)
+    block_data['weight'] = float(instance.weight)
+    block_data['body_mass_index'] = float(instance.body_mass_index)
     block_data['primary_language'] = instance.primary_language
     block_data['hair_color'] = instance.hair_color
     block_data['eye_color'] = instance.eye_color
@@ -258,28 +268,16 @@ def save_patient_demographics_post(sender, instance, **kwargs):
 
     #Creates Genesis Block in the blockchain if one hasn't been created already
     blockchain.objects.add_block(block_data)
+    signals.pre_save.connect(update_hash, sender = blockchain)
 
-@receiver(post_save, sender = Patient)
-def save_emergency_contacts_post(sender, instance, **kwargs):  
+@receiver(post_save, sender = Medication)
+def save_medication_post(sender, instance, **kwargs): 
+    signals.pre_save.disconnect(update_hash, sender = blockchain)  
+ 
     block_data = {}
-    block_data['db_op'] = 'Save'  
-    block_data['patient'] = instance.patient
-    block_data['first_name'] = instance.first_name
-    block_data['last_name'] = instance.last_name
-    block_data['primary_phone'] = instance.primary_phone
-    block_data['email'] = instance.email
-    block_data['relationship_to_patient'] = instance.relationship_to_patient
-
-    block_data = json.dumps(block_data)
-
-    #Creates Genesis Block in the blockchain if one hasn't been created already
-    blockchain.objects.add_block(block_data)
-
-@receiver(post_save, sender = Patient)
-def save_medication_post(sender, instance, **kwargs):  
-    block_data = {}
-    block_data['db_op'] = 'Save'  
-    block_data['patient'] = instance.patient
+    block_data['db_op'] = 'Save'
+    block_data['table'] = instance._meta.db_table    
+    block_data['patient'] = instance.patient.id
     block_data['medication'] = instance.medication
     block_data['frequency_description'] = instance.frequency_description
 
@@ -287,12 +285,16 @@ def save_medication_post(sender, instance, **kwargs):
 
     #Creates Genesis Block in the blockchain if one hasn't been created already
     blockchain.objects.add_block(block_data)
+    signals.pre_save.connect(update_hash, sender = blockchain)
 
-@receiver(post_save, sender = Patient)
+@receiver(post_save, sender = Allergies)
 def save_allergies_post(sender, instance, **kwargs):  
+    signals.pre_save.disconnect(update_hash, sender = blockchain)  
+
     block_data = {}
-    block_data['db_op'] = 'Save'  
-    block_data['patient'] = instance.patient
+    block_data['db_op'] = 'Save'
+    block_data['table'] = instance._meta.db_table    
+    block_data['patient'] = instance.patient.id
     block_data['allergic_to'] = instance.allergic_to
     block_data['allergy_notes'] = instance.allergy_notes
 
@@ -300,45 +302,61 @@ def save_allergies_post(sender, instance, **kwargs):
 
     #Creates Genesis Block in the blockchain if one hasn't been created already
     blockchain.objects.add_block(block_data)
+    signals.pre_save.connect(update_hash, sender = blockchain)
 
-@receiver(post_save, sender = Patient)
+@receiver(post_save, sender = Immunizations)
 def save_immunization_post(sender, instance, **kwargs):  
+    signals.pre_save.disconnect(update_hash, sender = blockchain)  
+
     block_data = {}
-    block_data['db_op'] = 'Save'  
-    block_data['patient'] = instance.patient
+    block_data['db_op'] = 'Save'
+    block_data['table'] = instance._meta.db_table    
+    block_data['patient'] = instance.patient.id
     block_data['vaccine'] = instance.vaccine
-    block_data['date_time'] = instance.date_time
+    block_data['date_time'] = instance.date_time.isoformat()
     block_data['complications'] = instance.complications
 
     block_data = json.dumps(block_data)
 
     #Creates Genesis Block in the blockchain if one hasn't been created already
     blockchain.objects.add_block(block_data)
+    signals.pre_save.connect(update_hash, sender = blockchain)
 
-@receiver(post_save, sender = Patient)
+@receiver(post_save, sender = Medical_Visits)
 def save_medical_visit_post(sender, instance, **kwargs):  
+    signals.pre_save.disconnect(update_hash, sender = blockchain)  
+
     block_data = {}
-    block_data['db_op'] = 'Save'  
-    block_data['patient'] = instance.patient
+    block_data['db_op'] = 'Save'
+    block_data['table'] = instance._meta.db_table    
+    block_data['patient'] = instance.patient.id
     block_data['reason'] = instance.reason
     block_data['main_complaint'] = instance.main_complaint
     block_data['description'] = instance.description
     block_data['type_of_visit'] = instance.type_of_visit
     block_data['examining_doctor'] = instance.examining_doctor
-    block_data['date_time'] = instance.date_time
+
+    if(instance.date_time is not None):
+        block_data['date_time'] = instance.date_time.strftime("%Y-%m-%dT%H:%M:%S")
+    else:
+        block_data['date_time'] = ''
 
     block_data = json.dumps(block_data)
 
     #Creates Genesis Block in the blockchain if one hasn't been created already
     blockchain.objects.add_block(block_data)
+    signals.pre_save.connect(update_hash, sender = blockchain)
 
-@receiver(post_save, sender = Patient)
+@receiver(post_save, sender = Surgical_History)
 def save_surgical_history_post(sender, instance, **kwargs):  
+    signals.pre_save.disconnect(update_hash, sender = blockchain)  
+
     block_data = {}
-    block_data['db_op'] = 'Save'  
-    block_data['patient'] = instance.patient
-    block_data['date_time'] = instance.date_time
-    block_data['duration'] = instance.duration
+    block_data['db_op'] = 'Save' 
+    block_data['table'] = instance._meta.db_table   
+    block_data['patient'] = instance.patient.id
+    block_data['date_time'] = instance.date_time.strftime("%Y-%m-%dT%H:%M:%S")
+    block_data['duration'] = instance.duration.strftime("%H:%M:%S")
     block_data['operating_doctors'] = instance.operating_doctors
     block_data['notes'] = instance.notes
     block_data['outcome'] = instance.outcome
@@ -348,14 +366,18 @@ def save_surgical_history_post(sender, instance, **kwargs):
 
     #Creates Genesis Block in the blockchain if one hasn't been created already
     blockchain.objects.add_block(block_data)
+    signals.pre_save.connect(update_hash, sender = blockchain)
 
-@receiver(post_save, sender = Patient)
-def save_transfusion_history_post(sender, instance, **kwargs):  
+@receiver(post_save, sender = History_Of_Transfusions)
+def save_transfusion_history_post(sender, instance, **kwargs):
+    signals.pre_save.disconnect(update_hash, sender = blockchain)  
+  
     block_data = {}
     block_data['db_op'] = 'Save'  
-    block_data['patient'] = instance.patient
+    block_data['table'] = instance._meta.db_table  
+    block_data['patient'] = instance.patient.id
     block_data['reason'] = instance.reason
-    block_data['units'] = instance.units
+    block_data['units'] = float(instance.units)
     block_data['type_of_transfusion'] = instance.type_of_transfusion
     block_data['veinous_access_device'] = instance.veinous_access_device
     block_data['infusion_device'] = instance.infusion_device
@@ -368,13 +390,17 @@ def save_transfusion_history_post(sender, instance, **kwargs):
 
     #Creates Genesis Block in the blockchain if one hasn't been created already
     blockchain.objects.add_block(block_data)
+    signals.pre_save.connect(update_hash, sender = blockchain)
 
-@receiver(post_save, sender = Patient)
-def save_history_of_present_illness_post(sender, instance, **kwargs):  
+@receiver(post_save, sender = History_Of_Present_Illness)
+def save_history_of_present_illness_post(sender, instance, **kwargs): 
+    signals.pre_save.disconnect(update_hash, sender = blockchain)  
+ 
     block_data = {}
     block_data['db_op'] = 'Save'  
-    block_data['patient'] = instance.patient
-    block_data['onset'] = instance.onset
+    block_data['table'] = instance._meta.db_table  
+    block_data['patient'] = instance.patient.id
+    block_data['onset'] = instance.onset.strftime("%Y-%m-%dT%H:%M:%S")
     block_data['illness'] = instance.illness
     block_data['body_location'] = instance.body_location
     block_data['description'] = instance.description
@@ -385,18 +411,31 @@ def save_history_of_present_illness_post(sender, instance, **kwargs):
 
     #Creates Genesis Block in the blockchain if one hasn't been created already
     blockchain.objects.add_block(block_data)
+    signals.pre_save.connect(update_hash, sender = blockchain)
 
-@receiver(post_save, sender = Patient)
-def save_family_history_illness_post(sender, instance, **kwargs):  
+@receiver(post_save, sender = Family_History)
+def save_family_history_illness_post(sender, instance, **kwargs):
+    signals.pre_save.disconnect(update_hash, sender = blockchain)  
+  
     block_data = {}
     block_data['db_op'] = 'Save'  
-    block_data['patient'] = instance.patient
+    block_data['table'] = instance._meta.db_table  
+    block_data['patient'] = instance.patient.id
     block_data['family_first_name'] = instance.family_first_name
     block_data['family_last_name'] = instance.family_last_name
     block_data['relationship_to_patient'] = instance.relationship_to_patient
     block_data['health_status'] = instance.health_status
-    block_data['date_of_birth'] = instance.date_of_birth
-    block_data['date_of_death'] = instance.date_of_death
+
+    if(instance.date_of_birth is not None):
+        block_data['date_of_birth'] = instance.date_cured.strftime("%Y-%m-%dT%H:%M:%S")
+    else:
+        block_data['date_of_birth'] = ''
+
+    if(instance.date_of_death is not None):
+        block_data['date_of_death'] = instance.date_cured.strftime("%Y-%m-%dT%H:%M:%S")
+    else:
+        block_data['date_of_death'] = ''
+
     block_data['cause_of_death'] = instance.cause_of_death
     block_data['description_of_illnesses'] = instance.description_of_illnesses
 
@@ -404,14 +443,23 @@ def save_family_history_illness_post(sender, instance, **kwargs):
 
     #Creates Genesis Block in the blockchain if one hasn't been created already
     blockchain.objects.add_block(block_data)
+    signals.pre_save.connect(update_hash, sender = blockchain)
 
-@receiver(post_save, sender = Patient)
+@receiver(post_save, sender = History_Of_Illnesses)
 def save_illness_history_post(sender, instance, **kwargs):  
+    signals.pre_save.disconnect(update_hash, sender = blockchain)  
+
     block_data = {}
-    block_data['db_op'] = 'Save'  
-    block_data['patient'] = instance.patient
-    block_data['onset_date'] = instance.onset_date
-    block_data['date_cured'] = instance.date_cured
+    block_data['db_op'] = 'Save' 
+    block_data['table'] = instance._meta.db_table   
+    block_data['patient'] = instance.patient.id
+    block_data['onset_date'] = instance.onset_date.strftime("%Y-%m-%dT%H:%M:%S")
+
+    if(instance.date_cured is not None):
+        block_data['date_cured'] = instance.date_cured.strftime("%Y-%m-%dT%H:%M:%S")
+    else:
+        block_data['date_cured'] = ''
+
     block_data['illness'] = instance.illness
     block_data['body_location'] = instance.body_location
     block_data['description'] = instance.description
@@ -422,13 +470,17 @@ def save_illness_history_post(sender, instance, **kwargs):
 
     #Creates Genesis Block in the blockchain if one hasn't been created already
     blockchain.objects.add_block(block_data)
+    signals.pre_save.connect(update_hash, sender = blockchain)
 
-@receiver(post_save, sender = Patient)
-def save_disabilities_post(sender, instance, **kwargs):  
+@receiver(post_save, sender = Disabilities)
+def save_disabilities_post(sender, instance, **kwargs):
+    signals.pre_save.disconnect(update_hash, sender = blockchain)  
+  
     block_data = {}
     block_data['db_op'] = 'Save'  
-    block_data['patient'] = instance.patient
-    block_data['onset_date'] = instance.onset_date
+    block_data['table'] = instance._meta.db_table  
+    block_data['patient'] = instance.patient.id
+    block_data['onset_date'] = instance.onset_date.strftime("%Y-%m-%dT%H:%M:%S")
     block_data['disability'] = instance.disability
     block_data['description'] = instance.description
     block_data['aggravating_factors'] = instance.aggravating_factors
@@ -438,31 +490,37 @@ def save_disabilities_post(sender, instance, **kwargs):
 
     #Creates Genesis Block in the blockchain if one hasn't been created already
     blockchain.objects.add_block(block_data)
+    signals.pre_save.connect(update_hash, sender = blockchain)
 
-@receiver(post_save, sender = Patient)
+@receiver(post_save, sender = Phys_Exam_Vitals)
 def save_exam_vitals_post(sender, instance, **kwargs):  
+    signals.pre_save.disconnect(update_hash, sender = blockchain)  
+
     block_data = {}
     block_data['db_op'] = 'Save'  
-    block_data['patient'] = instance.patient
+    block_data['table'] = instance._meta.db_table
     block_data['pressure_right_palpatation'] = instance.pressure_right_palpatation
     block_data['pressure_left_palpatation'] = instance.pressure_left_palpatation
     block_data['pressure_right_auscultation'] = instance.pressure_right_auscultation
     block_data['pressure_left_auscultation'] = instance.pressure_left_auscultation
     block_data['heart_rate'] = instance.heart_rate
     block_data['respiration_rate'] = instance.respiration_rate
-    block_data['temperature_celcius'] = instance.temperature_celcius
+    block_data['temperature_celcius'] = float(instance.temperature_celcius)
 
     block_data = json.dumps(block_data)
 
     #Creates Genesis Block in the blockchain if one hasn't been created already
     blockchain.objects.add_block(block_data)
+    signals.pre_save.connect(update_hash, sender = blockchain)
 
-@receiver(post_save, sender = Patient)
-def save_exam_heart_post(sender, instance, **kwargs):  
+@receiver(post_save, sender = Phys_Exam_Heart)
+def save_exam_heart_post(sender, instance, **kwargs):
+    signals.pre_save.disconnect(update_hash, sender = blockchain)  
+
     block_data = {}
     block_data['db_op'] = 'Save'  
-    block_data['patient'] = instance.patient
-    block_data['description'] = instance.pressure_right_palpatation
+    block_data['table'] = instance._meta.db_table
+    block_data['description'] = instance.description
     block_data['r_carotid_pulses_desc'] = instance.r_carotid_pulses_desc
     block_data['l_carotid_pulses_desc'] = instance.l_carotid_pulses_desc
     block_data['r_brachial_pulses_desc'] = instance.r_brachial_pulses_desc
@@ -481,19 +539,24 @@ def save_exam_heart_post(sender, instance, **kwargs):
     #Creates Genesis Block in the blockchain if one hasn't been created already
     blockchain.objects.add_block(block_data)
 
-@receiver(post_save, sender = Patient)
-def save_exam_heart_post(sender, instance, **kwargs):  
+    signals.pre_save.connect(update_hash, sender = blockchain)
+
+@receiver(post_save, sender = Phys_Exam)
+def save_exam_post(sender, instance, **kwargs):  
+    signals.pre_save.disconnect(update_hash, sender = blockchain)  
+
     block_data = {}
     block_data['db_op'] = 'Save'  
-    block_data['patient'] = instance.patient
-    block_data['date_time'] = instance.date_time
+    block_data['table'] = instance._meta.db_table  
+    block_data['patient'] = instance.patient.id
+    block_data['date_time'] = instance.date_time.strftime("%Y-%m-%dT%H:%M:%S")
     block_data['examining_doctor'] = instance.examining_doctor
-    block_data['height_in'] = instance.height_in
-    block_data['weight_lbs'] = instance.weight_lbs
-    block_data['vitals'] = instance.vitals
+    block_data['height_in'] = float(instance.height_in)
+    block_data['weight_lbs'] = float(instance.weight_lbs)
+    block_data['vitals'] = instance.vitals.id
     block_data['lymph_nodes_desc'] = instance.lymph_nodes_desc
     block_data['chest_desc'] = instance.chest_desc
-    block_data['heart'] = instance.heart
+    block_data['heart'] = instance.heart.id
     block_data['abdomen_desc'] = instance.abdomen_desc
     block_data['extremities_desc'] = instance.extremities_desc
     block_data['neurological_desc'] = instance.neurological_desc
@@ -508,6 +571,8 @@ def save_exam_heart_post(sender, instance, **kwargs):
 
     #Creates Genesis Block in the blockchain if one hasn't been created already
     blockchain.objects.add_block(block_data)
+    signals.pre_save.connect(update_hash, sender = blockchain)
+
 
 
 
