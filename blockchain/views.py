@@ -12,8 +12,14 @@ import json
 
 import nacl, nacl.secret, nacl.utils, nacl.pwhash
 
+@api_view(['GET'])
+def Show_Users(request):
+    users = User.objects.all()
+    ser = User_Serializer(users, many = True)
 
-#@api_view(['GET', 'POST',])
+    return JsonResponse(ser.data, safe = False)
+
+@api_view(['POST'])
 def Register_User(request):
     response_message = 'Enter User Data'
 

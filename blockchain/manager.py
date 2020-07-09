@@ -1,6 +1,7 @@
 from django.contrib.auth.models import BaseUserManager
 from django.db import models
 from django.db.models import Manager
+from django.db.models import QuerySet
 from django.db.models import signals
 from django.db import connection
 from datetime import datetime
@@ -51,7 +52,14 @@ class UserManager(BaseUserManager):
         user.save(using=self._db)
         return user
 
+class BlockchainQuerySet(QuerySet):
+    def update(self, *args, **kwargs):
+        raise Exception("Disabled for security reasons")
+
 class Blockchain_Manager(Manager):
+    def get_queryset(self):
+        return BlockchainQuerySet(self.model, using = self._db)
+
     def add_block(self, block_data):
         with connection.cursor() as cursor:
             #Get count
@@ -124,11 +132,28 @@ class Blockchain_Manager(Manager):
                 current = bc[count]
                 prev = bc[count - 1]
 
+                #If the current Hash's previous hash does not equal the hash of the previous hash, the block is tampered with 
                 if(current[2] != prev[1]):
                     data[str(prev[0])] = 'Tampered'
                     blockchain_status = 'Tampered'
                 else:
+                    """
+                    h = hashlib.new("sha256")
+
+                    h.update(bytes(bc[count][2].encode('utf-8')))
+                    h.update(bytes(bc[count][3].encode('utf-8')))
+                    h.update(bytes(bc[count][4].encode('utf-8')))
+
+                    f_hash = h.hexdigest()
+
+                    if(bc[count][1] != f_hash):
+                        data[str(current[0])] = 'Tampered'
+                    """
+
                     data[str(prev[0])] = 'Untampered'
+
+
+                
 
                 count -= 1
 
@@ -137,6 +162,8 @@ class Blockchain_Manager(Manager):
     def repair(self, bc_file):
         test_data = {}
         tampered = False
+
+        cursor = connection.cursor()
 
         bc_file = bc_file #open("/var/www/html/blockchain_server/blockchain/Files/blockchain.bc", "rb")
         key_file = open("/var/www/html/blockchain_server/blockchain/Files/key_file.bin", "rb")
@@ -170,8 +197,31 @@ class Blockchain_Manager(Manager):
 
             #If the uploaded blockchain is valid, use the check blockchain function to find any tampered blocks, and replace them with values from the untampered, uploaded 
             #blockchain
+            count = 0
 
-        return (test_data)
+            if(tampered == False):
+                checked_data = self.check_blockchain()
+
+                #Repairs the blockchain The loop goes through each block and determines if it is tampered. Tampered blocks are then replaced by untampered blocks from the
+                #uploaded file
+
+                self.all().delete()
+                for key in checked_data[0]:       
+                    """
+                    cursor.execute("INSERT INTO Blockchain (Hash, PreviousHash, TimeStamp, BlockData) VALUES (%s, %s, %s, %s)", 
+                    [blockchain[count]['Hash'], blockchain[count]['PreviousHash'], blockchain[count]['TimeStamp'], blockchain[count]['BlockData']])
+                    cursor.commit()
+                    """
+                    
+                    new_block = self.model(Hash = blockchain[count]['Hash'], PreviousHash = blockchain[count]['PreviousHash'], TimeStamp = blockchain[count]['TimeStamp'], BlockData = blockchain[count]['BlockData'])
+                    new_block.save(using = self._db)
+                    
+
+                    count += 1
+            else:
+                raise ValueError("Uploaded file is tampered with. Please upload an untampered valid file.")
+
+        return (blockchain)
 
 
 

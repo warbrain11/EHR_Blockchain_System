@@ -7,7 +7,7 @@ from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 from blockchain.models import *
 from blockchain_server import settings
-from blockchain.models import update_hash
+from blockchain.models import update_hash, User
 import json
 
 #from django.http import JsonResponse
@@ -18,6 +18,7 @@ class Patient(models.Model):
     primary_phone                   = models.CharField(max_length = 13, blank = False, null = False)
     cell_phone                      = models.CharField(max_length = 13, blank = False, null = False)
     email                           = models.EmailField(blank = False, null = False)
+    Users                           = models.ManyToManyField(User, related_name = "Users")
 
 class Emergency_Contacts(models.Model):
     patient                         = models.ForeignKey(Patient, on_delete = models.CASCADE)

@@ -7,13 +7,18 @@ class blockchain_serializer(serializers.ModelSerializer):
         model = blockchain
         fields = ['Hash', 'PreviousHash', 'TimeStamp', 'BlockData']
     
+class User_Serializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['username', 'email', 'password', 'first_name', 'last_name', 'date_of_birth', 'verification']
+
 class register_user_serializer(serializers.ModelSerializer):
     #password = serializers.CharField(style = {'input_type': 'password'}, write_only = True)
     password2 = serializers.CharField(style = {'input_type': 'password'}, write_only = True)
 
     class Meta:
         model = User
-        fields = ['username', 'email', 'password', 'password2', 'first_name', 'last_name', 'date_of_birth']
+        fields = ['username', 'email', 'password', 'password2', 'first_name', 'last_name', 'date_of_birth', 'verification']
         extra_kwargs = {
             'password': {'write_only': True}
         }
@@ -25,6 +30,7 @@ class register_user_serializer(serializers.ModelSerializer):
             first_name = self.validated_data['first_name'],
             last_name = self.validated_data['last_name'],
             date_of_birth = self.validated_data['date_of_birth'],
+            verification = self.validated_data['verification'],
         )
 
         password = self.validated_data['password']

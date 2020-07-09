@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from EHR_System.models import *
+from blockchain.serializers import User_Serializer
 from datetime import datetime
 
 class Patient_Demographics_Serializer(serializers.ModelSerializer):
@@ -13,10 +14,10 @@ class Emergency_Contacts_Serializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class Patient_Serializer(serializers.ModelSerializer):
-    patient_demographics = Patient_Demographics()
+    Users = User_Serializer(many = True, required = False)
     class Meta:
         model = Patient
-        fields = ['first_name', 'last_name', 'primary_phone', 'cell_phone', 'email']
+        fields = ['first_name', 'last_name', 'primary_phone', 'cell_phone', 'email', 'Users']
 
     def save(self):
         patient = Patient(

@@ -10,6 +10,7 @@ from EHR_System.update_views import *
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('register/', Register_User_API),
+    path('api/users/', Show_Users),
     path('login/', obtain_auth_token),
     path('api/blockchain/', display_blockchain),
     path('api/blockchain/check/', validate_blockchain),

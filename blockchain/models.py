@@ -26,6 +26,8 @@ class User(AbstractBaseUser):
     username                        = models.CharField(verbose_name = 'username', max_length=30, blank = False, null = False, primary_key = True, unique = True)
     email                           = models.EmailField(verbose_name = 'email', blank = False, null = False, unique = True)
 
+    verification                    = models.FileField(verbose_name = "verification", upload_to = "uploads/verification", null = True)
+
     first_name                      = models.CharField(max_length = 25, blank = False, null = False)
     last_name                       = models.CharField(max_length = 25, blank = False, null = False)
     date_of_birth                   = models.DateField(blank = False, null = False, default = timezone.now)
@@ -39,7 +41,7 @@ class User(AbstractBaseUser):
 
     EMAIL_FIELD                     = 'email'
     USERNAME_FIELD                  = 'username'
-    REQUIRED_FIELDS                 = ['email', 'first_name', 'last_name', 'date_of_birth']
+    REQUIRED_FIELDS                 = ['email', 'first_name', 'last_name', 'date_of_birth', 'verification']
 
     objects                         = UserManager()
     def __str__(self):

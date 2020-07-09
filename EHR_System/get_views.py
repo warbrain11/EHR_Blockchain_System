@@ -21,6 +21,8 @@ For non super user, test with token c508f934c0afa37ab7c37e299c4b8dc272a394b8
 @permission_classes([IsAuthenticated])
 def get_patient(request):
     try:
+        user = Token.objects.get(key = authToken[6:]).user
+
         #checks to see if request wants to retrieve one patient only by id
         if(request.data):
             data = {}
@@ -39,19 +41,23 @@ def get_patient(request):
             if('id' in request.data):
                 patient_id = int(request.data['id']) 
                 patient = Patient.objects.get(id = patient_id)
-                ser = Patient_Serializer(patient)
 
-                return JsonResponse(ser.data, safe = False)
+                #Checks to see if user is authorized to view patient's data
+                if(patient.Users.filter(username = user.username).exists()):
+                    ser = Patient_Serializer(patient)
+
+                    return JsonResponse(ser.data, safe = False)
+
+                 return JsonResponse("User is not authorized ", safe = False)
             
             patient = Patient.objects.filter(**data)
             if(patient):
                 ser = Patient_Serializer(patient, many = True)
 
                 return JsonResponse(ser.data, safe = False)
-        else:
+        else: #User must be a super user to view all patients
             authToken = request.headers.get('Authorization')
-            user = Token.objects.get(key = authToken[6:]).user
-
+            
             if(user.is_superuser):
                 p = Patient.objects.all()
                 ser = Patient_Serializer(p, many = True)
