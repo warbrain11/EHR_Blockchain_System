@@ -48,7 +48,7 @@ def get_patient(request):
 
                     return JsonResponse(ser.data, safe = False)
 
-                 return JsonResponse("User is not authorized ", safe = False)
+                return JsonResponse("User is not authorized ", safe = False)
             
             patient = Patient.objects.filter(**data)
             if(patient):
