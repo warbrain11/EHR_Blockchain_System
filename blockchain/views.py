@@ -51,7 +51,7 @@ def Register_User(request):
     return render(request, 'registerForm.html', {'form': form, 'response_message': response_message})
 
 
-@api_view(['GET'])
+@api_view(['POST'])
 def Register_Code_Gen(request):
     #Required access code and user email in order to generate and send code
     #Generate a 5 character code
@@ -118,15 +118,15 @@ def Register_User_API(request):
     real_authcode = Register_Access_Codes.objects.filter(code = authcode, email = email)
 
     #Checking if authcode is correct
-    if(real_authcode.count > 0):
-        real_authcode = real_authcode[0]
-        if(authcode == real_authcode):
+    if(real_authcode.count() > 0):
+        r_code = real_authcode[0].code
+        if(authcode == r_code):
             data.pop('authcode')
 
-            u = User.create_user(**data)
+            u = User.objects.create_user(**data)
 
             #Delete the authcode
-            real_authcode.delete()
+            real_authcode[0].delete()
 
             return JsonResponse("Welcome " + u.username + "!", safe = False)
     else:

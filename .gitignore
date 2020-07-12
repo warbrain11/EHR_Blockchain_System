@@ -1,3 +1,4 @@
 bc_env/
 static/
-blockchain/Files/
+blockchain/Files/email_pswd.bin
+blockchain/Files/email_pswd_key.bin
