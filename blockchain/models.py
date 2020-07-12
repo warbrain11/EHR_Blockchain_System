@@ -82,6 +82,9 @@ def prevent_delete(sender, instance, **kwargs):
     raise Exception('Cannot delete a block. Sorry not sorry.')
 """
 
+class Register_Access_Codes(models.Model):
+    code                            = models.CharField(max_length = 65, null = True, blank = True)
+    email                           = models.CharField(verbose_name = 'email', max_length=30, blank = False, null = True, unique = True)
 
 
 

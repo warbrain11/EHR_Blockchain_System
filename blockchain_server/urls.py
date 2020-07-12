@@ -7,8 +7,11 @@ from EHR_System.get_views import *
 from EHR_System.post_views import *
 from EHR_System.update_views import *
 
+
+
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('authregister/', Register_Code_Gen),
     path('register/', Register_User_API),
     path('api/users/', Show_Users),
     path('login/', obtain_auth_token),
